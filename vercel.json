@@ -4,7 +4,6 @@
       {
         "src": "/api/(.*)",
         "dest": "/server.js",
-        "methods": ["GET", "PATCH"],
         "public": true
       }
     ]
