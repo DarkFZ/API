@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste da API LED</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      color: #6366f1;
+    }
+    .status {
+      margin: 1rem 0;
+      font-size: 1.2rem;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: white;
+      background-color: #6366f1;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #4f46e5;
+    }
+    button:disabled {
+      background-color: #a1a1aa;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>Controle de LED</h1>
+  <div class="status">
+    Status do LED: <span id="ledState">Carregando...</span>
+  </div>
+  <button id="toggleButton" disabled>Carregando...</button>
+
+  <script>
+    const API_URL ='https://api-nine-silk-35.vercel.app/api/led';
+
+    const ledStateElement = document.getElementById('ledState');
+    const toggleButton = document.getElementById('toggleButton');
+
+    async function fetchLEDState() {
+      try {
+        const response = await fetch(API_URL);
+        if (response.ok) {
+          const data = await response.json();
+          updateUIState(data);
+        } else {
+          throw new Error('Erro ao buscar estado do LED');
+        }
+      }catch (error) {
+        console.log(error);
+        ledStateElement.textContent = 'Erro ao carregar';
+      }
+    }
+
+    async function toggleLED() {
+      try {
+        const currentState = ledStateElement.textContent === 'Ligado';
+        const newState = !currentState;
+
+        const response = await fetch(API_URL, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ isOn: newState, online: true }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          updateUIState({ isOn: newState });
+          console.log(data.message);
+        } else {
+          throw new Error('Erro ao alternar LED');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Erro ao alternar LED');
+      }
+    }
+
+    function updateUIState(state) {
+      ledStateElement.textContent = state.isOn ? 'Ligado' : 'Desligado';
+      toggleButton.textContent = state.isOn ? 'Desligar LED' : 'Ligar LED';
+      toggleButton.disabled = false;
+    }
+
+    // Inicialização
+    toggleButton.addEventListener('click', toggleLED);
+    fetchLEDState();
+  </script>
+</body>
+</html>
