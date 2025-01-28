@@ -4,8 +4,7 @@
     "routes": [
       {
         "src": "/api/(.*)",
-        "dest": "/server.js",
-        "public": true
+        "dest": "/server.js"
       }
     ]
   }
