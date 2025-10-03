@@ -6,13 +6,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const cors = require('cors');
-app.use(cors());
+const path = require('path');
 
+app.use(cors());
+app.use(express.json());
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-app.use(express.json());
+// Rota para servir a página de boas-vindas
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'welcome.html')); 
+});
 
 // Buscar estado do LED
 app.get('/api/led', async (req, res) => {
