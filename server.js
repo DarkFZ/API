@@ -16,7 +16,7 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 // Rota para servir a página de boas-vindas
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'welcome.html')); 
+  res.sendFile(path.join(__dirname, 'index.html')); 
 });
 
 // Buscar estado do LED
