@@ -14,6 +14,9 @@ app.use(express.json());
 // Servir arquivos estáticos da pasta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Servir também arquivos da pasta raiz (para o index.html)
+app.use(express.static(__dirname));
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
@@ -21,6 +24,8 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html')); 
 });
+
+// ... resto do seu código
 
 // Buscar estado do LED
 app.get('/api/led', async (req, res) => {
