@@ -11,6 +11,9 @@ const path = require('path');
 app.use(cors());
 app.use(express.json());
 
+// Servir arquivos estáticos da pasta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
