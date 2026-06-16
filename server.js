@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const { put, list } = require('@vercel/blob');
+const { put, list, del } = require('@vercel/blob');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// SUBSTITUA PELO SEU TOKEN REAL DO PAINEL DA VERCEL
+// Token do seu painel Vercel
 const MEU_TOKEN = 'vercel_blob_rw_Ghdvb6L66M5ZRJRl_A8hiza8weTtD3OHtJEoyKjFOsSufR2';
 
 app.post('/api/guardar-resposta', async (req, res) => {
@@ -18,41 +18,45 @@ app.post('/api/guardar-resposta', async (req, res) => {
         }
 
         let dadosExistentes = [];
+        let urlArquivoAntigo = null;
 
         try {
-            // Lista os arquivos usando o Token
+            // 1. Procurar pelo arquivo existente
             const { blobs } = await list({ token: MEU_TOKEN });
             const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
             
             if (arquivoBlob) {
-                // Para ler um arquivo privado, precisamos gerar uma URL assinada (ou passar o token)
-                // O fetch direto na URL pública falha em stores privados, então passamos o token no cabeçalho se necessário,
-                // mas a forma mais segura com a URL gerada pelo list() usando token é baixar com o token de autorização:
-                const respostaDownload = await fetch(arquivoBlob.url, {
-                    headers: { 'Authorization': `Bearer ${MEU_TOKEN}` }
-                });
-                
+                urlArquivoAntigo = arquivoBlob.url;
+                // Como a store é pública, fazemos o fetch direto e limpo na URL
+                const respostaDownload = await fetch(urlArquivoAntigo);
                 if (respostaDownload.ok) {
                     dadosExistentes = await respostaDownload.json();
                 }
             }
         } catch (erroLeitura) {
+            console.error("Criando o primeiro histórico:", erroLeitura);
             dadosExistentes = [];
         }
 
+        // 2. Adicionar a nova resposta ao array histórico
         dadosExistentes.push(novaResposta);
 
-        // ALTERADO: Mudamos 'access' para 'private' para bater com a configuração da sua Store
+        // 3. Deletar o arquivo antigo se ele existir (Evita acumular lixo e cache na Vercel)
+        if (urlArquivoAntigo) {
+            await del(urlArquivoAntigo, { token: MEU_TOKEN });
+        }
+
+        // 4. Salvar o arquivo atualizado como 'public' e sem sufixo aleatório
         await put('respostas.json', JSON.stringify(dadosExistentes, null, 2), {
-            access: 'private', // <-- Correção do erro aqui
-            addRandomSuffix: true,
+            access: 'public', // <-- Alterado para bater com o seu painel
+            addRandomSuffix: false, // <-- Fixo para conseguirmos ler sempre o mesmo histórico
             token: MEU_TOKEN
         });
 
         return res.status(200).json({ mensagem: 'Resposta guardada com sucesso!' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ erro: 'Erro interno.', detalhe: error.message });
+        return res.status(500).json({ erro: 'Erro interno ao salvar no Blob.', detalhe: error.message });
     }
 });
 
@@ -62,11 +66,8 @@ app.get('/api/ver-respostas', async (req, res) => {
         const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
 
         if (arquivoBlob) {
-            // Faz o download autenticado por ser um arquivo privado
-            const respostaDownload = await fetch(arquivoBlob.url, {
-                headers: { 'Authorization': `Bearer ${MEU_TOKEN}` }
-            });
-            
+            // Leitura direta e sem cabeçalhos de autenticação para arquivos públicos
+            const respostaDownload = await fetch(arquivoBlob.url);
             if (respostaDownload.ok) {
                 const dados = await respostaDownload.json();
                 return res.status(200).json(dados);
