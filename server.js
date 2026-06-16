@@ -44,7 +44,8 @@ app.post('/api/guardar-resposta', async (req, res) => {
         // mas mantemos o 'pathname' fixo para conseguirmos localizá-lo no passo 1.
         await put('respostas.json', JSON.stringify(dadosExistentes, null, 2), {
             access: 'public',
-            addRandomSuffix: true 
+            addRandomSuffix: true,
+            token: 'vercel_blob_rw_6QuF4p5ZOwnZtQZb_7XYrFNylPT7nmP3n3Ah1buM6odMD1I'
         });
 
         return res.status(200).json({ mensagem: 'Resposta guardada com sucesso!' });
@@ -57,7 +58,7 @@ app.post('/api/guardar-resposta', async (req, res) => {
 // Rota GET para visualizar todas as respostas acumuladas
 app.get('/api/ver-respostas', async (req, res) => {
     try {
-        const { blobs } = await list();
+        const { blobs } = await list({ token: 'vercel_blob_rw_6QuF4p5ZOwnZtQZb_7XYrFNylPT7nmP3n3Ah1buM6odMD1I' });
         const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
 
         if (arquivoBlob) {
