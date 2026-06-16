@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // SUBSTITUA PELO SEU TOKEN REAL DO PAINEL DA VERCEL
-const MEU_TOKEN = 'vercel_blob_rw_6QuF4p5ZOwnZtQZb_7XYrFNylPT7nmP3n3Ah1buM6odMD1I';
+const MEU_TOKEN = 'vercel_blob_rw_Ghdvb6L66M5ZRJRl_A8hiza8weTtD3OHtJEoyKjFOsSufR2';
 
 app.post('/api/guardar-resposta', async (req, res) => {
     try {
