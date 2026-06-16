@@ -8,6 +8,22 @@ app.use(express.json());
 
 const FILE_PATH = './respostas.json';
 
+
+// Rota GET para ler e enviar todas as respostas guardadas
+app.get('/api/ver-respostas', (req, res) => {
+    // Verificar se o ficheiro existe
+    if (fs.existsSync(FILE_PATH)) {
+        const conteudo = fs.readFileSync(FILE_PATH, 'utf-8');
+        const dados = JSON.parse(conteudo || '[]');
+        
+        // Devolve os dados com o estado 200 (Sucesso)
+        res.status(200).json(dados);
+    } else {
+        // Se o ficheiro ainda não existir, devolve um array vazio
+        res.status(200).json([]);
+    }
+});
+
 app.post('/api/guardar-resposta', (req, res) => {
     const novaResposta = req.body;
 
