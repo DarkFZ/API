@@ -1,52 +1,70 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv'); // Banco de dados gratuito da Vercel
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Rota GET para ler todas as respostas guardadas
-app.get('/api/ver-respostas', async (req, res) => {
-    try {
-        // Busca a lista na nuvem (se não existir, assume um array vazio)
-        const dados = await kv.get('respostas') || [];
-        return res.status(200).json(dados);
-    } catch (error) {
-        console.error("Erro no KV:", error);
-        return res.status(500).json({ erro: 'Erro ao ler dados do banco.' });
-    }
+app.post('/api/guardar-resposta', (req, res) => {
+    console.log("Dados recebidos no Vercel:", req.body);
+    
+    // Retorna sucesso simulado para testar o Frontend
+    return res.status(200).json({ 
+        mensagem: 'Conexão bem-sucedida! O backend recebeu os dados.' 
+    });
 });
 
-// Rota POST para guardar uma nova resposta
-app.post('/api/guardar-resposta', async (req, res) => {
-    try {
-        const novaResposta = req.body;
-        
-        if (!novaResposta || Object.keys(novaResposta).length === 0) {
-            return res.status(400).json({ erro: 'Dados vazios.' });
-        }
-
-        // Pega as respostas atuais que estão guardadas na nuvem
-        let dadosExistentes = await kv.get('respostas') || [];
-        
-        // Adiciona a nova
-        dadosExistentes.push(novaResposta);
-        
-        // Salva de volta na nuvem
-        await kv.set('respostas', dadosExistentes);
-
-        return res.status(200).json({ mensagem: 'Resposta adicionada com sucesso!' });
-    } catch (error) {
-        console.error("Erro no KV:", error);
-        return res.status(500).json({ erro: 'Erro ao guardar dados no banco.' });
-    }
-});
-
-// IMPORTANTE: Para o Express funcionar no Vercel, exportamos o app
 module.exports = app;
 
-app.listen(3000, () => console.log('Servidor central a correr na porta 3000'));
+// const express = require('express');
+// const cors = require('cors');
+// const { kv } = require('@vercel/kv'); // Banco de dados gratuito da Vercel
+// const app = express();
+
+// app.use(cors());
+// app.use(express.json());
+
+// // Rota GET para ler todas as respostas guardadas
+// app.get('/api/ver-respostas', async (req, res) => {
+//     try {
+//         // Busca a lista na nuvem (se não existir, assume um array vazio)
+//         const dados = await kv.get('respostas') || [];
+//         return res.status(200).json(dados);
+//     } catch (error) {
+//         console.error("Erro no KV:", error);
+//         return res.status(500).json({ erro: 'Erro ao ler dados do banco.' });
+//     }
+// });
+
+// // Rota POST para guardar uma nova resposta
+// app.post('/api/guardar-resposta', async (req, res) => {
+//     try {
+//         const novaResposta = req.body;
+        
+//         if (!novaResposta || Object.keys(novaResposta).length === 0) {
+//             return res.status(400).json({ erro: 'Dados vazios.' });
+//         }
+
+//         // Pega as respostas atuais que estão guardadas na nuvem
+//         let dadosExistentes = await kv.get('respostas') || [];
+        
+//         // Adiciona a nova
+//         dadosExistentes.push(novaResposta);
+        
+//         // Salva de volta na nuvem
+//         await kv.set('respostas', dadosExistentes);
+
+//         return res.status(200).json({ mensagem: 'Resposta adicionada com sucesso!' });
+//     } catch (error) {
+//         console.error("Erro no KV:", error);
+//         return res.status(500).json({ erro: 'Erro ao guardar dados no banco.' });
+//     }
+// });
+
+// // IMPORTANTE: Para o Express funcionar no Vercel, exportamos o app
+// module.exports = app;
+
+// app.listen(3000, () => console.log('Servidor central a correr na porta 3000'));
 
 
 // // server.js
