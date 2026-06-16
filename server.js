@@ -1,17 +1,40 @@
 const express = require('express');
 const cors = require('cors');
+const { kv } = require('@vercel/kv'); // Biblioteca oficial da Vercel
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/guardar-resposta', (req, res) => {
-    console.log("Dados recebidos no Vercel:", req.body);
-    
-    // Retorna sucesso simulado para testar o Frontend
-    return res.status(200).json({ 
-        mensagem: 'Conexão bem-sucedida! O backend recebeu os dados.' 
-    });
+// Rota POST para salvar
+app.post('/api/guardar-resposta', async (req, res) => {
+    try {
+        const novaResposta = req.body;
+
+        // 1. Pega o que já está salvo lá (se não houver nada, começa um array vazio)
+        let dadosExistentes = await kv.get('respostas_quiz') || [];
+
+        // 2. Adiciona a nova resposta que veio do formulário
+        dadosExistentes.push(novaResposta);
+
+        // 3. Salva a lista atualizada de volta na nuvem da Vercel
+        await kv.set('respostas_quiz', dadosExistentes);
+
+        return res.status(200).json({ mensagem: 'Resposta guardada com sucesso no banco!' });
+    } catch (error) {
+        console.error("Erro ao salvar no KV:", error);
+        return res.status(500).json({ erro: 'Erro interno ao salvar os dados.' });
+    }
+});
+
+// Rota GET para você conseguir ver as respostas depois
+app.get('/api/ver-respostas', async (req, res) => {
+    try {
+        const dados = await kv.get('respostas_quiz') || [];
+        return res.status(200).json(dados);
+    } catch (error) {
+        return res.status(500).json({ erro: 'Erro ao ler dados.' });
+    }
 });
 
 module.exports = app;
