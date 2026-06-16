@@ -6,7 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rota POST para salvar as respostas
+// SUBSTITUA PELO SEU TOKEN REAL DO PAINEL DA VERCEL
+const MEU_TOKEN = 'vercel_blob_rw_6QuF4p5ZOwnZtQZb_7XYrFNylPT7nmP3n3Ah1buM6odMD1I';
+
 app.post('/api/guardar-resposta', async (req, res) => {
     try {
         const novaResposta = req.body;
@@ -16,53 +18,55 @@ app.post('/api/guardar-resposta', async (req, res) => {
         }
 
         let dadosExistentes = [];
-        let urlArquivoAtual = null;
 
-        // 1. Procurar se já existe um arquivo 'respostas.json' no seu Storage
         try {
-            const { blobs } = await list();
+            // Lista os arquivos usando o Token
+            const { blobs } = await list({ token: MEU_TOKEN });
             const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
             
             if (arquivoBlob) {
-                urlArquivoAtual = arquivoBlob.url;
-                // Faz o download do conteúdo atual do arquivo JSON
-                const respostaDownload = await fetch(urlArquivoAtual);
+                // Para ler um arquivo privado, precisamos gerar uma URL assinada (ou passar o token)
+                // O fetch direto na URL pública falha em stores privados, então passamos o token no cabeçalho se necessário,
+                // mas a forma mais segura com a URL gerada pelo list() usando token é baixar com o token de autorização:
+                const respostaDownload = await fetch(arquivoBlob.url, {
+                    headers: { 'Authorization': `Bearer ${MEU_TOKEN}` }
+                });
+                
                 if (respostaDownload.ok) {
                     dadosExistentes = await respostaDownload.json();
                 }
             }
         } catch (erroLeitura) {
-            console.error("Ainda não existem arquivos salvos, criando o primeiro:", erroLeitura);
             dadosExistentes = [];
         }
 
-        // 2. Adicionar a nova resposta recebida do formulário
         dadosExistentes.push(novaResposta);
 
-        // 3. Salvar de volta no Vercel Blob
-        // Mudamos 'addRandomSuffix' para true para evitar que o Vercel rejeite o upload por conflito de cache,
-        // mas mantemos o 'pathname' fixo para conseguirmos localizá-lo no passo 1.
+        // ALTERADO: Mudamos 'access' para 'private' para bater com a configuração da sua Store
         await put('respostas.json', JSON.stringify(dadosExistentes, null, 2), {
-            access: 'public',
+            access: 'private', // <-- Correção do erro aqui
             addRandomSuffix: true,
-            token: 'vercel_blob_rw_6QuF4p5ZOwnZtQZb_7XYrFNylPT7nmP3n3Ah1buM6odMD1I'
+            token: MEU_TOKEN
         });
 
         return res.status(200).json({ mensagem: 'Resposta guardada com sucesso!' });
     } catch (error) {
-        console.error("Erro interno no servidor:", error);
-        return res.status(500).json({ erro: 'Erro interno ao salvar os dados no Blob.', detalhe: error.message });
+        console.error(error);
+        return res.status(500).json({ erro: 'Erro interno.', detalhe: error.message });
     }
 });
 
-// Rota GET para visualizar todas as respostas acumuladas
 app.get('/api/ver-respostas', async (req, res) => {
     try {
-        const { blobs } = await list({ token: 'vercel_blob_rw_6QuF4p5ZOwnZtQZb_7XYrFNylPT7nmP3n3Ah1buM6odMD1I' });
+        const { blobs } = await list({ token: MEU_TOKEN });
         const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
 
         if (arquivoBlob) {
-            const respostaDownload = await fetch(arquivoBlob.url);
+            // Faz o download autenticado por ser um arquivo privado
+            const respostaDownload = await fetch(arquivoBlob.url, {
+                headers: { 'Authorization': `Bearer ${MEU_TOKEN}` }
+            });
+            
             if (respostaDownload.ok) {
                 const dados = await respostaDownload.json();
                 return res.status(200).json(dados);
@@ -75,6 +79,8 @@ app.get('/api/ver-respostas', async (req, res) => {
 });
 
 module.exports = app;
+
+
 
 
 // const express = require('express');
