@@ -1,67 +1,71 @@
 const express = require('express');
 const cors = require('cors');
-const { put, del } = require('@vercel/blob');
+const { put, list } = require('@vercel/blob');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// URL estática para onde o seu JSON vai ficar acessível publicamente (para leitura)
-const BLOB_URL = 'https://api-nine-silk-35.vercel.app/api/ver-respostas';
-
-// Rota POST para salvar
+// Rota POST para salvar as respostas
 app.post('/api/guardar-resposta', async (req, res) => {
     try {
         const novaResposta = req.body;
 
-        // 1. Tentar ler os dados existentes fazendo um fetch no arquivo atual (se ele já existir)
+        if (!novaResposta || Object.keys(novaResposta).length === 0) {
+            return res.status(400).json({ erro: 'Dados vazios.' });
+        }
+
         let dadosExistentes = [];
+        let urlArquivoAtual = null;
+
+        // 1. Procurar se já existe um arquivo 'respostas.json' no seu Storage
         try {
-            // Buscamos o histórico atual que guardamos no passo anterior
-            const respostaBlob = await fetch('https://api-nine-silk-35.vercel.app/api/ver-respostas-dados');
-            if (respostaBlob.ok) {
-                dadosExistentes = await respostaBlob.json();
+            const { blobs } = await list();
+            const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
+            
+            if (arquivoBlob) {
+                urlArquivoAtual = arquivoBlob.url;
+                // Faz o download do conteúdo atual do arquivo JSON
+                const respostaDownload = await fetch(urlArquivoAtual);
+                if (respostaDownload.ok) {
+                    dadosExistentes = await respostaDownload.json();
+                }
             }
-        } catch (e) {
-            // Se falhar (primeira vez), assume array vazio
+        } catch (erroLeitura) {
+            console.error("Ainda não existem arquivos salvos, criando o primeiro:", erroLeitura);
             dadosExistentes = [];
         }
 
-        // 2. Adicionar a nova resposta
+        // 2. Adicionar a nova resposta recebida do formulário
         dadosExistentes.push(novaResposta);
 
-        // 3. Salvar o arquivo de volta no Vercel Blob (sempre substituindo o mesmo nome)
-        // Usamos access: 'public' para conseguirmos ler depois, e addRandomSuffix: false para manter o nome limpo
+        // 3. Salvar de volta no Vercel Blob
+        // Mudamos 'addRandomSuffix' para true para evitar que o Vercel rejeite o upload por conflito de cache,
+        // mas mantemos o 'pathname' fixo para conseguirmos localizá-lo no passo 1.
         await put('respostas.json', JSON.stringify(dadosExistentes, null, 2), {
             access: 'public',
-            addRandomSuffix: false
+            addRandomSuffix: true 
         });
 
-        return res.status(200).json({ mensagem: 'Resposta guardada com sucesso no Blob!' });
+        return res.status(200).json({ mensagem: 'Resposta guardada com sucesso!' });
     } catch (error) {
-        console.error("Erro no Vercel Blob:", error);
-        return res.status(500).json({ erro: 'Erro interno ao salvar no Blob.' });
+        console.error("Erro interno no servidor:", error);
+        return res.status(500).json({ erro: 'Erro interno ao salvar os dados no Blob.', detalhe: error.message });
     }
 });
 
-// Rota GET auxiliar para o backend ler os próprios dados internamente
-app.get('/api/ver-respostas-dados', async (req, res) => {
-    try {
-        // Redireciona internamente para o link real do arquivo JSON gerado pelo Blob
-        // Nota: Na primeira execução isso pode dar erro até o arquivo ser criado
-        return res.redirect(`https://api-nine-silk-35.public.blob.vercel-storage.com/respostas.json`);
-    } catch (error) {
-        return res.status(200).json([]);
-    }
-});
-
-// Rota GET oficial que você vai usar no navegador para ver o resultado
+// Rota GET para visualizar todas as respostas acumuladas
 app.get('/api/ver-respostas', async (req, res) => {
     try {
-        const respostaReal = await fetch(`https://api-nine-silk-35.public.blob.vercel-storage.com/respostas.json`);
-        if (respostaReal.ok) {
-            const dados = await respostaReal.json();
-            return res.status(200).json(dados);
+        const { blobs } = await list();
+        const arquivoBlob = blobs.find(b => b.pathname === 'respostas.json');
+
+        if (arquivoBlob) {
+            const respostaDownload = await fetch(arquivoBlob.url);
+            if (respostaDownload.ok) {
+                const dados = await respostaDownload.json();
+                return res.status(200).json(dados);
+            }
         }
         return res.status(200).json([]);
     } catch (error) {
@@ -70,6 +74,8 @@ app.get('/api/ver-respostas', async (req, res) => {
 });
 
 module.exports = app;
+
+
 // const express = require('express');
 // const cors = require('cors');
 // const { kv } = require('@vercel/kv'); // Banco de dados gratuito da Vercel
