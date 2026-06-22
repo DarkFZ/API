@@ -82,11 +82,18 @@ app.put('/api/questionarios/:id', async (req, res) => {
 
 app.delete('/api/questionarios/:id', async (req, res) => {
     try {
+        const id = req.params.id;
         const lista = await lerBlob('questionarios.json') || [];
-        const novos = lista.filter(q => q.id !== req.params.id);
+        const novos = lista.filter(q => q.id !== id);
         if (novos.length === lista.length) return res.status(404).json({ erro: 'Não encontrado.' });
         await gravarBlob('questionarios.json', novos);
-        res.json({ mensagem: 'Questionário apagado com sucesso.' });
+
+        const respostas = await lerBlob('respostas.json') || [];
+        const semRespostas = respostas.filter(r => r.questionario_id !== id);
+        const eliminadas = respostas.length - semRespostas.length;
+        if (eliminadas > 0) await gravarBlob('respostas.json', semRespostas);
+
+        res.json({ mensagem: 'Questionário apagado com sucesso.', respostas_eliminadas: eliminadas });
     } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
